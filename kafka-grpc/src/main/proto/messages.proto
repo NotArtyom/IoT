@@ -1,0 +1,14 @@
+syntax = "proto3";
+package com.method.iot.kafkagrpc;
+
+message MessageRequest {
+  string payload = 1;
+}
+
+message MessageResponse {
+  string status = 1;
+}
+
+service MessageService {
+  rpc sendMessage(MessageRequest) returns (MessageResponse){};
+}
