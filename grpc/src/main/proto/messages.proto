@@ -1,0 +1,41 @@
+syntax = "proto3";
+package com.method.iot;
+
+message RootRequest {
+  double number = 1;
+}
+
+message RootResponse {
+  double result = 1;
+}
+
+message STDChunkRequest {
+  double number = 1;
+}
+
+message STDResponse {
+  double result = 1;
+}
+
+message DividersRequest {
+  int64 number = 1;
+}
+
+message DividerResponse {
+  int64 divider = 1;
+}
+
+message StreamingMaxRequest {
+  double number = 1;
+}
+
+message StreamingMaxResponse {
+  double result = 1;
+}
+
+service CalculationService {
+  rpc root(RootRequest) returns (RootResponse){};
+  rpc std(stream STDChunkRequest) returns (STDResponse){};
+  rpc dividers(DividersRequest) returns (stream DividerResponse){};
+  rpc streamingMax(stream StreamingMaxRequest) returns (stream StreamingMaxResponse){};
+}
