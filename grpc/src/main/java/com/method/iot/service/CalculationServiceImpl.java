@@ -63,18 +63,32 @@ public class CalculationServiceImpl extends CalculationServiceGrpc.CalculationSe
     @Override
     public void dividers(Messages.DividersRequest request, StreamObserver<Messages.DividerResponse> responseObserver) {
         long target = request.getNumber();
-        LongStream.range(1, target / 2 + 1)
-                .forEach(e -> {
-                    if (target % e == 0) {
-                        responseObserver.onNext(
-                                Messages.DividerResponse
-                                        .newBuilder()
-                                        .setDivider(e)
-                                        .build()
-                        );
-                    }
-                });
+
+        while (target % 2 == 0) {
+            sendDividerResponse(responseObserver, 2);
+            target /= 2;
+        }
+
+        for (long i = 3; i <= Math.sqrt(target); i += 2) {
+            while (target % i == 0) {
+                sendDividerResponse(responseObserver, i);
+                target /= i;
+            }
+        }
+
+        if (target > 2)
+            sendDividerResponse(responseObserver, target);
+
         responseObserver.onCompleted();
+    }
+
+    private void sendDividerResponse(StreamObserver<Messages.DividerResponse> responseObserver, long divider) {
+        responseObserver.onNext(
+                Messages.DividerResponse
+                        .newBuilder()
+                        .setDivider(divider)
+                        .build()
+        );
     }
 
     @Override
