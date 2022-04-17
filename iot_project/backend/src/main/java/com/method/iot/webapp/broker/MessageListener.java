@@ -11,12 +11,12 @@ public class MessageListener implements Runnable {
     @Autowired
     private BrokerService service;
 
-    @Value("${mqtt.broker.pushTopic}")
+    @Value("${mqtt.broker.clientToServerTopic}")
     private String topic;
 
     @Override
     public void run() {
-        System.out.println("Subscribing" + topic);
+        System.out.println("Subscribing " + topic);
         service.subscribeTopic(topic);
     }
 }
