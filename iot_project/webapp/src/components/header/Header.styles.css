@@ -1,0 +1,10 @@
+.Header-container{
+    display: flex;
+    flex-direction: column;
+}
+
+.Header-switcher {}
+
+.Header-button {
+    margin-top: 32px;
+}

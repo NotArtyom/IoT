@@ -1,14 +1,16 @@
-import React from 'react';
-import './App.css';
+import React from 'react'
+import './App.css'
+import { Header } from 'components/header'
 
 function App() {
-  return (
-    <div className="App">
-      <div className="App-header">
 
-      </div>
-    </div>
-  );
+    const onButtonClick = () => {}
+
+    return (
+        <div className="App">
+            <Header onClick={onButtonClick}/>
+        </div>
+    )
 }
 
-export default App;
+export default App
