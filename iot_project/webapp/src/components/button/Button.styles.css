@@ -1,0 +1,35 @@
+.Button-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    width: 480px;
+    height: 56px;
+}
+
+.Button-container-active {
+    background-color: #4068D4;
+}
+
+.Button-container-disabled {
+    background-color: #494557;
+}
+
+.Button-text {
+    font-style: normal;
+    font-weight: 400;
+    font-size: 20px;
+    line-height: 28px;
+    /* identical to box height, or 140% */
+    text-align: center;
+}
+
+.Button-text-active {
+    /* Gray/900 */
+    color: #FFFFFF;
+}
+
+.Button-text-disabled {
+    /* Gray / 700 */
+    color: #BDBBC7;
+}
