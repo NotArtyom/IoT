@@ -1,83 +1,111 @@
 from __future__ import annotations
 
-import enum
+import contextlib
 import time
-from types import TracebackType
+import json
+from typing import Generator
 from typing import NoReturn
-from typing import Optional
+from concurrent.futures import ThreadPoolExecutor
 
+import paho.mqtt.client as mqtt
+from pirc522 import RFID
 import RPi.GPIO as GPIO
 
+import enum
+
+INBOUND_TOPIC = 'team10/serverToClient'
+OUTBOUND_TOPIC = 'team10/clientToServer'
+BROKER_URL = 'broker.mqttdashboard.com'
+BROKER_PORT = 1883
+BROKER_KEEPALIVE = 60
+QOS = 2
 
 
-class Pin(enum.IntEnum):
-    RED = 11
-    GREEN = 13
-    BLUE = 15
-    BUTTON = 37
+rdr = RFID()
 
 
-class State:
-    def __init__(self) -> None:
-        self._index = 0
-        self._states = [
-            (0, 0, 0),
-            (1, 0, 0),
-            (1, 1, 0),
-            (0, 1, 1),
-            (0, 0, 1),
-        ]
+class State(str, enum.Enum):
+    IDLE = "IDLE"
+    SCANNING = "SCANNING"
 
-    def __iter__(self) -> State:
-        return self
-
-    def __next__(self) -> tuple[int, int, int]:
-        curr_state = self._states[self._index]
-        self._index = (self._index + 1) % len(self._states)
-        return curr_state
+illumination = {
+    "RED": 3,
+    "GREEN": 5,
+    "BLUE": 7,
+}
 
 
-class GPIOManager:
-    def __init__(self) -> None:
-        GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(Pin.RED, GPIO.OUT)
-        GPIO.setup(Pin.GREEN, GPIO.OUT)
-        GPIO.setup(Pin.BLUE, GPIO.OUT)
-        GPIO.setup(Pin.BUTTON, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-        self._state = State()
+@contextlib.contextmanager
+def run_gpio() -> Generator[GPIO, None, None]:
+    try:
+        yield GPIO
+    finally:
+        pass
 
-    def __enter__(self) -> GPIOManager:
-        return self
+def blink(illumination, v: int):
+    global GPIO_initialized
+    if v != -1:
+        GPIO.output(v, GPIO.HIGH)
+        time.sleep(0.5)
+        GPIO.output(illumination['RED'], GPIO.LOW)
+        GPIO.output(illumination['GREEN'], GPIO.LOW)
+        GPIO.output(illumination['BLUE'], GPIO.LOW)
 
-    def __exit__(
-        self,
-        tp: Optional[type[BaseException]],
-        inst: Optional[BaseException],
-        tb: Optional[TracebackType],
-    ) -> Optional[bool]:
-        GPIO.cleanup()
-        if isinstance(inst, KeyboardInterrupt):
-            return True
-        else:
-            return None
-
-    def send(self) -> None:
-        r, g, b = next(self._state)
-        GPIO.output(Pin.RED, GPIO.LOW if not r else GPIO.HIGH)
-        GPIO.output(Pin.GREEN, GPIO.LOW if not g else GPIO.HIGH)
-        GPIO.output(Pin.BLUE, GPIO.LOW if not b else GPIO.HIGH)
+# STATE
+current_state = State.IDLE
 
 
-def main() -> NoReturn:
-    with GPIOManager() as gm:
-        gm.send()
-        while True:
-            print(GPIO.input(Pin.BUTTON))
-            if GPIO.input(Pin.BUTTON) == GPIO.HIGH:
-                gm.send()
-                time.sleep(0.4)
-            time.sleep(0.05)
+def initialize_GPIO():
+    GPIO.setmode(GPIO.BOARD)
+    GPIO.setup(illumination['RED'], GPIO.OUT)
+    GPIO.setup(illumination['GREEN'], GPIO.OUT)
+    GPIO.setup(illumination['BLUE'], GPIO.OUT)
+    GPIO.output(illumination['RED'], GPIO.LOW)
+    GPIO.output(illumination['GREEN'], GPIO.LOW)
+    GPIO.output(illumination['BLUE'], GPIO.LOW)
 
 
-if __name__ == "__main__":
-    raise SystemExit(main())
+initialize_GPIO()
+
+#MQTT
+mqttc = mqtt.Client()
+mqttc.connect(BROKER_URL)
+
+
+def handle_message(client: mqtt.Client, d, message) -> NoReturn:
+    global current_state
+    json_object = json.loads(message.payload)
+    current_state = State[json_object["state"]]
+    current_illumination = illumination.get(json_object["illumination"], -1)
+    blink(illumination, current_illumination)
+
+    while current_state == State.SCANNING:
+        rdr.wait_for_tag()
+        error, data = rdr.request()
+        if not error:
+            error, uid = rdr.anticoll()
+            if not error:
+                uid_string = f"{'-'.join(map(str, uid))}"
+                json_message = '{' + f'"uuid": "{uid_string}"' + '}'
+                client.publish(
+                    OUTBOUND_TOPIC,
+                    json_message,
+                    qos=QOS,
+                ).wait_for_publish(5)
+                break
+
+
+
+mqttc.on_message = handle_message
+
+mqttc.on_subscribe = lambda c, d, mid, granted_qos: print(
+    f'Subscribed: {mid!s} {granted_qos!s}',
+)
+mqttc.on_log = lambda c, d, l, buf: print(buf)
+mqttc.connect(BROKER_URL)
+mqttc.subscribe(INBOUND_TOPIC, QOS)
+
+try:
+    mqttc.loop_forever()
+except KeyboardInterrupt:
+    GPIO.cleanup()
