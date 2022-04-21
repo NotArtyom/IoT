@@ -4,8 +4,8 @@ export interface ButtonProps {
 }
 
 export enum EButtonState {
-    Register = 'Register',
-    Registering = 'Registering',
-    Check = 'Check',
-    CheckDisabled = 'CheckDisabled'
+    Register = 'REGISTER',
+    Registering = 'REGISTERING',
+    Check = 'CHECK',
+    CheckDisabled = 'CHECKDISABLED'
 }

@@ -1,6 +1,7 @@
-import { FC, useCallback } from 'react'
+import React, { FC, useCallback } from 'react'
 import { ButtonProps, EButtonState } from './Button.types'
 import './Button.styles.css'
+import { AppContext } from 'App.context'
 
 export const Button: FC<ButtonProps> = ({
                                             state,
@@ -25,8 +26,10 @@ export const Button: FC<ButtonProps> = ({
     }
 
     return (
-        <div onClick={onClick} className={`Button-container ${containerStyle()}`}>
-            <div className={`Button-text ${textStyle()}`}>{text()}</div>
-        </div>
+        <AppContext.Consumer>
+            {() => <div onClick={onClick} className={`Button-container ${containerStyle()}`}>
+                <div className={`Button-text ${textStyle()}`}>{text()}</div>
+            </div>}
+        </AppContext.Consumer>
     )
 }

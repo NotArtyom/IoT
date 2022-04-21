@@ -1,3 +1,4 @@
 export interface HeaderProps {
-    onClick(): void
+    // onClick(): void
+    response: IResponse | null
 }
